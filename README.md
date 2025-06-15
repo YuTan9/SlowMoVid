@@ -15,3 +15,6 @@ fat-finger-fellows to be able to easily jump from frame to frame.
 
 ## Demo
 [Demo video on YouTube](https://youtu.be/XZKMlVZbpXU?si=siX6d2k1tgtrXGxQ)
+
+## App Icon Attribution
+<a href="https://www.flaticon.com/free-icons/slow-motion" title="slow motion icons">Slow motion icons created by Freepik - Flaticon</a>
