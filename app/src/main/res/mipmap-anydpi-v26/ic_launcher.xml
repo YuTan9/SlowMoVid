@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        <a
+            href="https://www.flaticon.com/free-icons/slow-motion"
+            title="slow motion icons">
+                Slow motion icons created by Freepik - Flaticon
+        </a>
+    -->
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

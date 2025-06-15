@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -20,11 +21,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.exoplayer2.*;
 import com.google.android.exoplayer2.ui.PlayerView;
 
+import java.util.Locale;
+
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_PICK_VIDEO = 101;
     private static final float[] SPEEDS = {0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f};
     private static final long FRAME_SEEK_INTERVAL_MS = 100;
+    private static final String TAG = "VideoPlayer";
 
     private PlayerView playerView;
     private ExoPlayer player;
@@ -35,10 +39,15 @@ public class MainActivity extends AppCompatActivity {
     private View controlOverlay, topBar;
     private DrawingView drawingView;
 
+    private SeekBar videoSeekBar;
+    private TextView currentTimeText, totalDurationText;
+
     private boolean controlsVisible = true;
     private float previousSpeed = 1.0f;
     private boolean isInEditMode = false;
     private final Handler frameSeekHandler = new Handler(Looper.getMainLooper());
+    private final Handler seekBarHandler = new Handler(Looper.getMainLooper());
+    private Runnable updateSeekBarRunnable;
     private boolean isSeekingForward = false;
     private boolean isSeekingBackward = false;
 
@@ -87,6 +96,9 @@ public class MainActivity extends AppCompatActivity {
         topBar = findViewById(R.id.topBar);
         drawingView = findViewById(R.id.drawingView);
         modeText = findViewById(R.id.modeText);
+        videoSeekBar = findViewById(R.id.videoSeekBar);
+        currentTimeText = findViewById(R.id.currentTime);
+        totalDurationText = findViewById(R.id.totalDuration);
     }
 
     private void setListeners() {
@@ -125,7 +137,32 @@ public class MainActivity extends AppCompatActivity {
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
-        setupGestures();
+        videoSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                if (fromUser && player != null) {
+                    player.seekTo(progress);
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
+        updateSeekBarRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (player != null && player.isPlaying()) {
+                    int currentPos = (int) player.getCurrentPosition();
+                    videoSeekBar.setProgress(currentPos);
+                }
+                seekBarHandler.postDelayed(this, 1000);
+            }
+        };
+
+        playerView.setOnClickListener(v -> {
+            toggleControls();
+        });
+
         setupEditMenu();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -145,34 +182,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setupGestures() {
-        GestureDetector gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
-            @Override public boolean onSingleTapUp(@NonNull MotionEvent e) {
-                if (!isInEditMode) toggleControls();
-                return true;
-            }
-            @Override public void onLongPress(@NonNull MotionEvent e) {
-                if (!isInEditMode && player != null && player.isPlaying()) {
-                    previousSpeed = player.getPlaybackParameters().speed;
-                    player.setPlaybackParameters(new PlaybackParameters(0.25f));
-                }
-            }
-        });
-
-        playerView.setOnTouchListener((v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                if (!isInEditMode && player != null && player.isPlaying()) {
-                    player.setPlaybackParameters(new PlaybackParameters(previousSpeed));
-                }
-            }
-            v.performClick();
-            return gestureDetector.onTouchEvent(event);
-        });
-    }
-
     private void toggleControls() {
         controlsVisible = !controlsVisible;
         int visibility = controlsVisible ? View.VISIBLE : View.GONE;
+        Log.d(TAG, "toggleControls: setting visibility to " + controlsVisible);
         controlOverlay.setVisibility(visibility);
         topBar.setVisibility(visibility);
     }
@@ -183,7 +196,6 @@ public class MainActivity extends AppCompatActivity {
                 onStop.run();
                 frameSeekHandler.removeCallbacksAndMessages(null);
             }
-            v.performClick();
             return false;
         };
     }
@@ -207,7 +219,25 @@ public class MainActivity extends AppCompatActivity {
         if (player == null) {
             player = new ExoPlayer.Builder(this).build();
             playerView.setPlayer(player);
+
+            player.addListener(new Player.Listener() {
+                @Override
+                public void onPlaybackStateChanged(int state) {
+                    if (state == Player.STATE_READY) {
+                        long durationMs = player.getDuration();
+                        totalDurationText.setText(formatTime(durationMs));
+                        videoSeekBar.setMax((int) durationMs);
+                    }
+                }
+            });
         }
+    }
+
+    private String formatTime(long millis) {
+        long totalSeconds = millis / 1000;
+        long minutes = totalSeconds / 60;
+        long seconds = totalSeconds % 60;
+        return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds);
     }
 
     @Override
@@ -220,6 +250,7 @@ public class MainActivity extends AppCompatActivity {
             player.setMediaItem(item);
             player.prepare();
             playPauseButton.setImageResource(R.drawable.baseline_play_arrow_24);
+            seekBarHandler.post(updateSeekBarRunnable);
         }
     }
 
@@ -227,6 +258,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         if (player != null) {
+            seekBarHandler.removeCallbacks(updateSeekBarRunnable);
             player.release();
             player = null;
         }
