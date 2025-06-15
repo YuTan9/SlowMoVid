@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">VideoPlayer</string>
+    <string name="speedText">Speed: </string>
+    <string name="timesText">x</string>
+</resources>
