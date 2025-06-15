@@ -14,4 +14,4 @@ fat-finger-fellows to be able to easily jump from frame to frame.
 5. Draw on the video for reference.
 
 ## Demo
-<demo video link>
+[Demo video on YouTube](https://youtu.be/XZKMlVZbpXU?si=siX6d2k1tgtrXGxQ)

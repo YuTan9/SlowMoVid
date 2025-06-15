@@ -1,14 +1,16 @@
 package edu.sjsu.android.videoplayer;
 
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.GestureDetector;
+import android.Manifest;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.*;
@@ -81,6 +83,15 @@ public class MainActivity extends AppCompatActivity {
         initializePlayer();
         setListeners();
         pickVideo();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_MEDIA_VIDEO}, 1001);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1001);
+            }
+        }
     }
 
     private void bindViews() {
@@ -280,7 +291,7 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             });
             menu.getMenu().add("Erase All").setOnMenuItemClickListener(item -> {
-                if (isInEditMode) drawingView.clearAll();
+                drawingView.clearAll();
                 return true;
             });
             menu.getMenu().add("Exit Edit Mode").setOnMenuItemClickListener(item -> {
